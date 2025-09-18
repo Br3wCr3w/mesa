@@ -1,8 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, TrackByFunction } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
-import { Observable } from 'rxjs';
-import { TasksFacade } from '../../store/tasks/tasks.facade';
-import { Task } from '../../store/tasks/tasks.models';
+import { TableFacade } from '../../store/table/table.facade';
+import { Message, Player } from '../../store/table/table.models';
 
 @Component({
   selector: 'app-home',
@@ -11,51 +10,65 @@ import { Task } from '../../store/tasks/tasks.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage implements OnInit {
-  readonly totals$ = this.tasksFacade.totals$;
-  readonly pendingTasks$: Observable<Task[]> = this.tasksFacade.pendingTasks$;
-  readonly completedTasks$: Observable<Task[]> = this.tasksFacade.completedTasks$;
-  readonly loading$ = this.tasksFacade.loading$;
-  readonly error$ = this.tasksFacade.error$;
+  readonly viewModel$ = this.tableFacade.viewModel$;
+  readonly players$ = this.tableFacade.players$;
+  readonly messages$ = this.tableFacade.messages$;
+  readonly scene$ = this.tableFacade.scene$;
+  readonly aiAssistant$ = this.tableFacade.aiAssistant$;
 
-  readonly taskForm = this.formBuilder.nonNullable.group({
-    title: ['', [Validators.required, Validators.minLength(3)]],
-    notes: [''],
+  readonly chatForm = this.formBuilder.nonNullable.group({
+    message: ['', [Validators.required, Validators.minLength(2)]],
   });
 
-  readonly trackByTaskId: TrackByFunction<Task> = (_, item) => item.id;
+  readonly aiForm = this.formBuilder.nonNullable.group({
+    prompt: ['', [Validators.required, Validators.minLength(3)]],
+  });
+
+  readonly trackByMessage: TrackByFunction<Message & { authorName: string }> = (_, item) => item.id;
+  readonly trackByPlayer: TrackByFunction<Player> = (_, item) => item.id;
+
+  private readonly hostPlayerId = 'guide-01';
 
   constructor(
-    private readonly tasksFacade: TasksFacade,
+    private readonly tableFacade: TableFacade,
     private readonly formBuilder: FormBuilder,
   ) {}
 
   ngOnInit(): void {
-    this.tasksFacade.loadTasks();
+    this.tableFacade.enterTable();
   }
 
-  onSubmit(): void {
-    if (this.taskForm.invalid) {
-      this.taskForm.markAllAsTouched();
+  sendMessage(): void {
+    if (this.chatForm.invalid) {
+      this.chatForm.markAllAsTouched();
       return;
     }
 
-    this.tasksFacade.createTask({
-      title: this.taskForm.controls.title.value,
-      notes: this.taskForm.controls.notes.value,
-    });
+    const message = this.chatForm.controls.message.value.trim();
+    if (!message) {
+      return;
+    }
 
-    this.taskForm.reset({ title: '', notes: '' });
+    this.tableFacade.sendChatMessage(this.hostPlayerId, message);
+    this.chatForm.reset({ message: '' });
   }
 
-  toggleCompletion(task: Task): void {
-    this.tasksFacade.toggleCompletion(task.id);
+  requestGuidance(): void {
+    if (this.aiForm.invalid) {
+      this.aiForm.markAllAsTouched();
+      return;
+    }
+
+    const prompt = this.aiForm.controls.prompt.value.trim();
+    if (!prompt) {
+      return;
+    }
+
+    this.tableFacade.requestAiGuidance(prompt);
+    this.aiForm.reset({ prompt: '' });
   }
 
-  updateNotes(task: Task, value: string | null | undefined): void {
-    this.tasksFacade.updateNotes(task.id, value?.trim() ?? '');
-  }
-
-  removeTask(task: Task): void {
-    this.tasksFacade.removeTask(task.id);
+  toggleAudio(playerId: string): void {
+    this.tableFacade.togglePlayerAudio(playerId);
   }
 }
