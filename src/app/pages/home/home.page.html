@@ -1,0 +1,143 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-title>Mesa Tasks</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-progress-bar *ngIf="loading$ | async" type="indeterminate"></ion-progress-bar>
+  <ion-text color="danger" *ngIf="error$ | async as error" class="error-banner">
+    {{ error }}
+  </ion-text>
+  <div class="page">
+    <section class="page__form" aria-labelledby="new-task-heading">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title id="new-task-heading">Create a task</ion-card-title>
+          <ion-card-subtitle>Plan your day and sync it across sessions.</ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <form (ngSubmit)="onSubmit()" [formGroup]="taskForm" novalidate>
+            <ion-item>
+              <ion-input
+                type="text"
+                label="Task"
+                label-placement="floating"
+                formControlName="title"
+                placeholder="What do you need to remember?"
+                required
+              ></ion-input>
+            </ion-item>
+            <ion-note class="error" *ngIf="taskForm.controls.title.touched && taskForm.controls.title.invalid">
+              Please add at least three characters.
+            </ion-note>
+            <ion-item>
+              <ion-textarea
+                auto-grow="true"
+                label="Notes"
+                label-placement="floating"
+                formControlName="notes"
+                placeholder="Details, links, or reminders"
+              ></ion-textarea>
+            </ion-item>
+            <ion-button type="submit" expand="block" [disabled]="taskForm.invalid">
+              Save task
+            </ion-button>
+          </form>
+        </ion-card-content>
+      </ion-card>
+    </section>
+
+    <section class="page__overview" aria-live="polite">
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Progress</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <div class="metrics" *ngIf="totals$ | async as totals">
+            <div class="metric">
+              <span class="metric__label">Total</span>
+              <span class="metric__value">{{ totals.total }}</span>
+            </div>
+            <div class="metric">
+              <span class="metric__label">Completed</span>
+              <span class="metric__value">{{ totals.completed }}</span>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Pending</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <ng-container *ngIf="pendingTasks$ | async as pending; else emptyPending">
+            <ion-list>
+              <ion-item-sliding *ngFor="let task of pending; trackBy: trackByTaskId">
+                <ion-item>
+                  <ion-checkbox
+                    slot="start"
+                    [checked]="task.completed"
+                    (ionChange)="toggleCompletion(task)"
+                    aria-label="Toggle completion"
+                  ></ion-checkbox>
+                  <ion-label>
+                    <h2>{{ task.title }}</h2>
+                    <p>{{ task.notes }}</p>
+                    <time>{{ task.createdAt | date: 'short' }}</time>
+                  </ion-label>
+                </ion-item>
+                <ion-item-options>
+                  <ion-item-option color="danger" (click)="removeTask(task)">
+                    Delete
+                  </ion-item-option>
+                </ion-item-options>
+              </ion-item-sliding>
+            </ion-list>
+          </ng-container>
+          <ng-template #emptyPending>
+            <p class="empty">No pending tasks. Enjoy your day!</p>
+          </ng-template>
+        </ion-card-content>
+      </ion-card>
+
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Completed</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <ng-container *ngIf="completedTasks$ | async as completed; else emptyCompleted">
+            <ion-accordion-group>
+              <ion-accordion *ngFor="let task of completed; trackBy: trackByTaskId">
+                <ion-item slot="header">
+                  <ion-label>
+                    <h2>{{ task.title }}</h2>
+                    <time>{{ task.createdAt | date: 'short' }}</time>
+                  </ion-label>
+                </ion-item>
+                <div class="completed__content" slot="content">
+                  <ion-textarea
+                    [value]="task.notes"
+                    auto-grow="true"
+                    (ionInput)="updateNotes(task, $event.detail.value)"
+                    placeholder="Add notes"
+                  ></ion-textarea>
+                  <ion-button fill="clear" color="medium" (click)="toggleCompletion(task)">
+                    Mark as pending
+                  </ion-button>
+                  <ion-button fill="clear" color="danger" (click)="removeTask(task)">
+                    Delete
+                  </ion-button>
+                </div>
+              </ion-accordion>
+            </ion-accordion-group>
+          </ng-container>
+          <ng-template #emptyCompleted>
+            <p class="empty">Tasks you complete will show here.</p>
+          </ng-template>
+        </ion-card-content>
+      </ion-card>
+    </section>
+  </div>
+</ion-content>

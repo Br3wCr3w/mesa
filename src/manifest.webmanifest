@@ -1,0 +1,10 @@
+{
+  "name": "Mesa PWA",
+  "short_name": "Mesa",
+  "theme_color": "#3880ff",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "icons": []
+}
