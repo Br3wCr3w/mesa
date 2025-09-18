@@ -1,143 +1,151 @@
-<ion-header>
-  <ion-toolbar color="primary">
-    <ion-title>Mesa Tasks</ion-title>
+<ion-header class="mesa-header" mode="ios">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button fill="clear" aria-label="Toggle menu">
+        <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Neon Aurora Table</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" aria-label="Recenter view">
+        <ion-icon slot="icon-only" name="compass-outline"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" aria-label="Scene settings">
+        <ion-icon slot="icon-only" name="color-palette-outline"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" aria-label="Session options">
+        <ion-icon slot="icon-only" name="ellipsis-horizontal"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-progress-bar *ngIf="loading$ | async" type="indeterminate"></ion-progress-bar>
-  <ion-text color="danger" *ngIf="error$ | async as error" class="error-banner">
-    {{ error }}
-  </ion-text>
-  <div class="page">
-    <section class="page__form" aria-labelledby="new-task-heading">
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title id="new-task-heading">Create a task</ion-card-title>
-          <ion-card-subtitle>Plan your day and sync it across sessions.</ion-card-subtitle>
-        </ion-card-header>
-        <ion-card-content>
-          <form (ngSubmit)="onSubmit()" [formGroup]="taskForm" novalidate>
-            <ion-item>
-              <ion-input
-                type="text"
-                label="Task"
-                label-placement="floating"
-                formControlName="title"
-                placeholder="What do you need to remember?"
-                required
-              ></ion-input>
-            </ion-item>
-            <ion-note class="error" *ngIf="taskForm.controls.title.touched && taskForm.controls.title.invalid">
-              Please add at least three characters.
-            </ion-note>
-            <ion-item>
-              <ion-textarea
-                auto-grow="true"
-                label="Notes"
-                label-placement="floating"
-                formControlName="notes"
-                placeholder="Details, links, or reminders"
-              ></ion-textarea>
-            </ion-item>
-            <ion-button type="submit" expand="block" [disabled]="taskForm.invalid">
-              Save task
-            </ion-button>
-          </form>
-        </ion-card-content>
-      </ion-card>
-    </section>
+<ion-content [fullscreen]="true" class="mesa-content">
+  <ng-container *ngIf="viewModel$ | async as vm">
+    <ion-progress-bar *ngIf="vm.isLoading" type="indeterminate"></ion-progress-bar>
+    <ion-text color="danger" *ngIf="vm.error" class="mesa-error" role="alert">
+      {{ vm.error }}
+    </ion-text>
 
-    <section class="page__overview" aria-live="polite">
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>Progress</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <div class="metrics" *ngIf="totals$ | async as totals">
-            <div class="metric">
-              <span class="metric__label">Total</span>
-              <span class="metric__value">{{ totals.total }}</span>
+    <div class="mesa-grid" role="main">
+      <section class="mesa-grid__chat" aria-label="Party chat">
+        <header class="pane-header">
+          <div class="pane-header__title">
+            <ion-icon name="chatbubbles-outline"></ion-icon>
+            <span>Party Chat</span>
+          </div>
+          <ion-chip color="tertiary" mode="md" class="pane-header__status">
+            <ion-icon name="radio-outline"></ion-icon>
+            <ion-label>{{ vm.connectionStatus | titlecase }}</ion-label>
+          </ion-chip>
+        </header>
+
+        <ion-list class="chat-list" lines="none" *ngIf="messages$ | async as messages">
+          <ion-item
+            *ngFor="let message of messages; trackBy: trackByMessage"
+            class="chat-list__item"
+            lines="none"
+          >
+            <div
+              class="chat-bubble"
+              [class.chat-bubble--ai]="message.authorType === 'ai'"
+              [style.--bubble-accent]="message.accentColor"
+            >
+              <div class="chat-bubble__meta">
+                <span class="chat-bubble__author">{{ message.authorName }}</span>
+                <time>{{ message.createdAt | date: 'shortTime' }}</time>
+              </div>
+              <p class="chat-bubble__content">{{ message.content }}</p>
             </div>
-            <div class="metric">
-              <span class="metric__label">Completed</span>
-              <span class="metric__value">{{ totals.completed }}</span>
+          </ion-item>
+        </ion-list>
+
+        <form class="chat-form" [formGroup]="chatForm" (ngSubmit)="sendMessage()">
+          <ion-item lines="none" class="chat-form__input">
+            <ion-textarea
+              formControlName="message"
+              auto-grow="true"
+              placeholder="Share your move or plan..."
+            ></ion-textarea>
+          </ion-item>
+          <ion-note class="chat-form__hint">Aurora monitors the channel to offer tactical boosts.</ion-note>
+          <ion-button type="submit" expand="block">Send message</ion-button>
+        </form>
+      </section>
+
+      <section class="mesa-grid__stage" aria-label="Virtual table">
+        <ng-container *ngIf="scene$ | async as scene">
+          <div class="stage-hud" role="group" aria-label="Scene information">
+            <div class="stage-hud__title">
+              <h2>{{ scene.title }}</h2>
+              <p>{{ scene.summary }}</p>
+            </div>
+            <div class="stage-hud__meta">
+              <ion-icon name="sunset-outline"></ion-icon>
+              <span>{{ scene.ambience }}</span>
             </div>
           </div>
-        </ion-card-content>
-      </ion-card>
 
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>Pending</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <ng-container *ngIf="pendingTasks$ | async as pending; else emptyPending">
-            <ion-list>
-              <ion-item-sliding *ngFor="let task of pending; trackBy: trackByTaskId">
-                <ion-item>
-                  <ion-checkbox
-                    slot="start"
-                    [checked]="task.completed"
-                    (ionChange)="toggleCompletion(task)"
-                    aria-label="Toggle completion"
-                  ></ion-checkbox>
-                  <ion-label>
-                    <h2>{{ task.title }}</h2>
-                    <p>{{ task.notes }}</p>
-                    <time>{{ task.createdAt | date: 'short' }}</time>
-                  </ion-label>
-                </ion-item>
-                <ion-item-options>
-                  <ion-item-option color="danger" (click)="removeTask(task)">
-                    Delete
-                  </ion-item-option>
-                </ion-item-options>
-              </ion-item-sliding>
-            </ion-list>
-          </ng-container>
-          <ng-template #emptyPending>
-            <p class="empty">No pending tasks. Enjoy your day!</p>
-          </ng-template>
-        </ion-card-content>
-      </ion-card>
+          <div class="stage-canvas" aria-hidden="false">
+            <div class="stage-canvas__glow"></div>
+            <div class="stage-canvas__grid"></div>
+            <div class="stage-canvas__sun"></div>
+            <div class="stage-canvas__arch"></div>
+            <div class="stage-canvas__figures"></div>
+          </div>
+        </ng-container>
 
-      <ion-card>
-        <ion-card-header>
-          <ion-card-title>Completed</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <ng-container *ngIf="completedTasks$ | async as completed; else emptyCompleted">
-            <ion-accordion-group>
-              <ion-accordion *ngFor="let task of completed; trackBy: trackByTaskId">
-                <ion-item slot="header">
-                  <ion-label>
-                    <h2>{{ task.title }}</h2>
-                    <time>{{ task.createdAt | date: 'short' }}</time>
-                  </ion-label>
-                </ion-item>
-                <div class="completed__content" slot="content">
-                  <ion-textarea
-                    [value]="task.notes"
-                    auto-grow="true"
-                    (ionInput)="updateNotes(task, $event.detail.value)"
-                    placeholder="Add notes"
-                  ></ion-textarea>
-                  <ion-button fill="clear" color="medium" (click)="toggleCompletion(task)">
-                    Mark as pending
-                  </ion-button>
-                  <ion-button fill="clear" color="danger" (click)="removeTask(task)">
-                    Delete
-                  </ion-button>
-                </div>
-              </ion-accordion>
-            </ion-accordion-group>
-          </ng-container>
-          <ng-template #emptyCompleted>
-            <p class="empty">Tasks you complete will show here.</p>
-          </ng-template>
-        </ion-card-content>
-      </ion-card>
-    </section>
-  </div>
+        <div class="stage-ai" *ngIf="aiAssistant$ | async as ai" aria-label="AI guidance">
+          <div class="stage-ai__header">
+            <ion-icon name="sparkles-outline"></ion-icon>
+            <span>Aurora Assistance</span>
+            <ion-spinner *ngIf="ai.isThinking" name="crescent"></ion-spinner>
+          </div>
+          <p class="stage-ai__message">{{ ai.suggestion }}</p>
+          <form class="stage-ai__form" [formGroup]="aiForm" (ngSubmit)="requestGuidance()">
+            <ion-item lines="none">
+              <ion-input
+                type="text"
+                formControlName="prompt"
+                placeholder="Ask Aurora for a twist or description"
+              ></ion-input>
+            </ion-item>
+            <ion-button type="submit" expand="block">Ask Aurora</ion-button>
+          </form>
+        </div>
+
+        <div class="stage-players" *ngIf="players$ | async as players" aria-label="Player roster">
+          <div class="stage-players__header">
+            <ion-icon name="people-circle-outline"></ion-icon>
+            <span>{{ players.length }} online</span>
+            <ion-button size="small" fill="outline" color="light">
+              <ion-icon slot="start" name="mic-outline"></ion-icon>
+              Join voice channel
+            </ion-button>
+          </div>
+          <div class="stage-players__list">
+            <ion-card *ngFor="let player of players; trackBy: trackByPlayer" class="player-card">
+              <div class="player-card__badge" [style.background]="player.color"></div>
+              <div class="player-card__info">
+                <h3>{{ player.name }}</h3>
+                <p>{{ player.role }}</p>
+              </div>
+              <ion-buttons slot="end" class="player-card__actions">
+                <ion-button
+                  fill="clear"
+                  size="small"
+                  [color]="player.isMuted ? 'medium' : 'success'"
+                  (click)="toggleAudio(player.id)"
+                  [attr.aria-pressed]="!player.isMuted"
+                >
+                  <ion-icon [name]="player.isMuted ? 'mic-off-outline' : 'mic-outline'"></ion-icon>
+                </ion-button>
+                <ion-icon *ngIf="player.isSpeaking" name="pulse-outline" class="player-card__speaking"></ion-icon>
+              </ion-buttons>
+            </ion-card>
+          </div>
+        </div>
+      </section>
+    </div>
+  </ng-container>
 </ion-content>

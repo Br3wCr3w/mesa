@@ -8,8 +8,8 @@ import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { environment } from './environment';
-import { TasksEffects } from './store/tasks/tasks.effects';
-import { tasksReducer } from './store/tasks/tasks.reducer';
+import { TableEffects } from './store/table/table.effects';
+import { tableReducer } from './store/table/table.reducer';
 import { ServiceWorkerModule } from '@angular/service-worker';
 import { HttpClientModule } from '@angular/common/http';
 
@@ -21,9 +21,9 @@ import { HttpClientModule } from '@angular/common/http';
     HttpClientModule,
     AppRoutingModule,
     StoreModule.forRoot({
-      tasks: tasksReducer,
+      table: tableReducer,
     }),
-    EffectsModule.forRoot([TasksEffects]),
+    EffectsModule.forRoot([TableEffects]),
     ...(environment.production
       ? []
       : [
