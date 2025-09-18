@@ -1,0 +1,19 @@
+@import "@ionic/angular/css/core.css";
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+@import "@ionic/angular/css/display.css";
+
+html, body, app-root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--ion-font-family, 'Helvetica Neue', Arial, sans-serif);
+  background: var(--ion-background-color, #f4f5f8);
+}
+
+:root {
+  color-scheme: light dark;
+}
